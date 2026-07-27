@@ -35,7 +35,7 @@ export interface ProcessedData {
 }
 
 // ---- パス ----
-const CSV_PATH = path.resolve(__dirname, "../../raw.csv");
+const CSV_PATH = path.resolve(__dirname, "../raw.csv");
 const OUT_PATH = path.resolve(__dirname, "../public/data/nightingale.json");
 
 // ---- メイン ----
