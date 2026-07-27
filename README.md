@@ -1,36 +1,106 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 衛生改革予算化に向けた可視化アプリケーション (Nightingale Report)
 
-## Getting Started
+フロレンス・ナイチンゲールによるクリミア戦争の死亡統計データを現代のWebインタラクティブ可視化技術（Next.js / TypeScript / Recharts）で再現し、衛生投資の費用対効果（ROI）を政策決定者へ主張するためのストーリーテリングWebアプリケーションです。
 
-First, run the development server:
+---
+
+## 1. 研究・制作の背景と目的
+
+1854年〜1856年のクリミア戦争において、フロレンス・ナイチンゲールは「兵士の死者の大部分は敵の攻撃による戦死ではなく、病院内の不衛生に起因する予防可能な感染症である」ことをデータで突き止め、英国政府および軍高官を説得して衛生改革を断行させました。
+
+本アプリケーションは、ナイチンゲールの歴史的データ分析と説得の手法（ストーリーテリング）をベースに、ユーザー（高官・評価者）に対して単にグラフを見せるだけでなく、**「問題の提示 → 危機感の醸成 → 改善効果の証明 → 投資対効果（ROI）の提言」**の4段階で順を追ってデータ根拠を提示するよう構築されています。
+
+---
+
+## 2. ストーリーテリングの4フェーズ構成
+
+画面下部のステッパーUI、またはURLクエリパラメータ（`?phase=1` 〜 `?phase=4`）によって以下の4フェーズを展開します。
+
+| フェーズ | テーマ | 目的と可視化表現 |
+| :--- | :--- | :--- |
+| **Phase 1** | **衝撃の提示**<br>*(全体像と死因対比)* | **「最大の敵はロシア軍ではなく自陣の不衛生である」**<br>全期間の死者数内訳を円グラフおよびカウントアップアニメーションで提示。感染症死が戦死の約**4.1倍**に達している事実を浮き彫りにします。 |
+| **Phase 2** | **絶望の可視化**<br>*(時系列推移)* | **「このままでは軍が壊滅する」**<br>1854年4月からの月次死者数を時系列アニメーションで描画。積層エリアグラフ（死者数）と右Y軸ライン（兵力: Army）の二軸グラフにより、冬にかけて感染症死が異常な速度で積み上がる危機感を表現します。 |
+| **Phase 3** | **介入の効果証明**<br>*(衛生改善と反論)* | **「気候ではなく衛生改善によって死者が減った」**<br>1855年3月の「衛生委員会派遣」強調マーカー（縦破線）を表示。また、「暖かくなったから減った」という季節要因論を反駁するため、**1854年春 vs 1855年春の同月（4〜6月）感染症死者数を直接比較する棒グラフ**を併記しています。 |
+| **Phase 4** | **投資対効果と提言**<br>*(政策ROI)* | **「衛生管理への予算投入は最も効果的な軍事投資である」**<br>ピーク時死亡率が継続したと仮定した「反実仮想（Counterfactual）シナリオ」を算出し、実際の死亡数と比較。**約3.9万人の兵力救済**、**約89%の感染症死削減率（RadialBar表示）**、および推計軍事予算削減額（£76,000以上）を定量提示します。 |
+
+---
+
+## 3. データ処理と統計・分析モデル
+
+### ① データソース
+* `raw.csv`: クリミア戦争における野戦病院の月次死亡統計（1854年4月〜1856年3月、全24ヶ月）。
+  * 項目: 年月（`Date`, `Month`, `Year`）、平均兵力（`Army`）、死者数（`Disease`, `Wounds`, `Other`）、年換算千人当たり死亡率（`Disease.rate`, `Wounds.rate`, `Other.rate`）。
+
+### ② 反実仮想（Counterfactual）計算モデル (Phase 4)
+* **目的**: 衛生改革が行われなかった場合の「仮想死亡数」と「実効救済数」の定量化。
+* **計算式**: 
+  $$\text{仮想月次感染症死} = \text{Army} \times \frac{\text{peakDiseaseRate}}{12 \times 1000}$$
+  *(※ peakDiseaseRate = 1855年1月の 1022.8 / 1000人 / 年)*
+* **ROI算出根拠**:
+  * 熟練兵士1人あたりの徴兵・訓練・装備年間コストを **£50 / 人** と設定。
+  * 史料的根拠: 1850年代の英国労働者年収（約£25〜35）および軍事訓練補給費の推計（Finlaison 1857; Mitchell 1988 *"Abstract of British Historical Statistics"*）。
+
+---
+
+## 4. 技術スタックとアーキテクチャ
+
+* **Webフレームワーク**: Next.js 16 (App Router, SSG/静的エクスポート前提)
+* **プログラミング言語**: TypeScript (厳格型検査 `strict: true`)
+* **データ可視化**: Recharts (ComposedChart, BarChart, PieChart, RadialBarChart, ReferenceLine)
+* **UI/アニメーション**: Tailwind CSS, Framer Motion
+* **ビルド時静的データ変換**:
+  * `scripts/convert-csv.ts` が `predev` / `prebuild` フックで自動起動。
+  * `raw.csv` をビルド時に解析し、型定義された `public/data/nightingale.json` へ事前出力。サーバーサイドリアルタイム処理を排除し、Vercel等で高速動作。
+* **状態管理**:
+  * `usePhaseState` フックにより、UI状態を URLクエリパラメータ (`?phase=N`) およびブラウザ履歴 (`popstate`) と完全同期。
+
+---
+
+## 5. 開発・実行手順
+
+### 必須環境
+* Node.js v18 以上
+* npm / pnpm / yarn
+
+### コマンド一覧
 
 ```bash
+# 1. 依存パッケージのインストール
+npm install
+
+# 2. 開発サーバーの起動 (自動的に scripts/convert-csv.ts が事前実行されます)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# 3. ブラウザで確認
+# http://localhost:3000
+
+# 4. 本番用静的サイトビルド (TypeScript型チェック + SSG静的ページ生成)
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 6. ディレクトリ構成
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```text
+app/
+├── scripts/
+│   └── convert-csv.ts       # raw.csv を静的JSONへ変換・Counterfactual計算を行うビルドスクリプト
+├── src/
+│   ├── app/
+│   │   ├── components/
+│   │   │   ├── Phase1Hero.tsx          # Phase 1: 内訳円グラフ & カウントアップ
+│   │   │   ├── Phase2Timeline.tsx      # Phase 2: 時系列推移アニメーション & 2軸グラフ
+│   │   │   ├── Phase3Intervention.tsx  # Phase 3: 衛生委員会派遣マーカー & 春季同月比較
+│   │   │   ├── Phase4ROI.tsx           # Phase 4: 反実仮想比較 & ROIゲージ
+│   │   │   └── StepperNav.tsx          # 4フェーズ遷移用ナビゲーション
+│   │   ├── page.tsx                    # メインページ
+│   │   └── layout.tsx                  # ルートレイアウト
+│   ├── lib/
+│   │   └── usePhaseState.ts            # URLクエリ連動フェーズ状態フック
+│   └── types/
+│       └── data.ts                     # TypeScript型定義 (RawData, ProcessedData)
+└── public/
+    └── data/
+        └── nightingale.json            # 生成された静的パースデータ
+```
