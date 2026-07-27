@@ -170,10 +170,10 @@ export default function Phase3Intervention({ data }: Phase3Props) {
               <YAxis tick={{ fill: "#6c757d", fontSize: 10 }} axisLine={{ stroke: "#dee2e6" }} tickLine={false} />
               <Tooltip content={<CompareTooltip />} />
               <Legend iconType="square" iconSize={10} formatter={(v) => <span style={{ color: "#495057", fontSize: "11px" }}>{v}</span>} />
-              <Bar dataKey="1854年春" radius={[2, 2, 0, 0]}>
+              <Bar dataKey="1854年春" fill={COLORS.disease} radius={[2, 2, 0, 0]}>
                 {springCompare.map((_, i) => <Cell key={i} fill={COLORS.disease} opacity={0.85} />)}
               </Bar>
-              <Bar dataKey="1855年春" radius={[2, 2, 0, 0]}>
+              <Bar dataKey="1855年春" fill={COLORS.intervention} radius={[2, 2, 0, 0]}>
                 {springCompare.map((_, i) => <Cell key={i} fill={COLORS.intervention} opacity={0.85} />)}
               </Bar>
             </BarChart>
